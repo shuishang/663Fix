@@ -75,8 +75,8 @@ phStatus_t phbalReg_Stub_OpenPort(
                                   phbalReg_Stub_DataParams_t * pDataParams
                                   )
 {
-#ifdef SPI_USED
-
+//#ifdef SPI_USED
+//
 //	PINSEL_CFG_Type PinCfg;
 //	SSP_CFG_Type SSP_ConfigStruct;
 //	uint32_t ClockRate = 1000000;
@@ -124,41 +124,16 @@ phStatus_t phbalReg_Stub_OpenPort(
 //
 //	SSP_Init(LPC_SSPx, &SSP_ConfigStruct);
 //	SSP_Cmd(LPC_SSPx, ENABLE);
-	GPIO_InitTypeDef GPIO_InitStructure;    
-  	RCC_APB2PeriphClockCmd(RC663_SPI_CS_GPIO_CLK, ENABLE);
-    RCC_APB2PeriphClockCmd(RC663_SPI_MOSI_GPIO_CLK, ENABLE);
-	RCC_APB2PeriphClockCmd(RC663_SPI_SCLK_GPIO_CLK, ENABLE);
-	RCC_APB2PeriphClockCmd(RC663_SPI_MISO_GPIO_CLK, ENABLE);
-
-	
-	GPIO_InitStructure.GPIO_Pin = RC663_SPI_CS_GPIO_PIN;
-	GPIO_InitStructure.GPIO_Mode = RC663_SPI_CS_GPIO_MODE;
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;  
-	GPIO_Init(RC663_SPI_CS_GPIO, &GPIO_InitStructure);
-
-    GPIO_InitStructure.GPIO_Pin = RC663_SPI_MOSI_GPIO_PIN;
-	GPIO_InitStructure.GPIO_Mode = RC663_SPI_MOSI_GPIO_MODE;
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;  
-	GPIO_Init(RC663_SPI_MOSI_GPIO, &GPIO_InitStructure);
-
-	GPIO_InitStructure.GPIO_Pin = RC663_SPI_SCLK_GPIO_PIN;
-	GPIO_InitStructure.GPIO_Mode = RC663_SPI_SCLK_GPIO_MODE;
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;  
-	GPIO_Init(RC663_SPI_SCLK_GPIO, &GPIO_InitStructure);
-
-   	GPIO_InitStructure.GPIO_Pin = RC663_SPI_MISO_GPIO_PIN;
-	GPIO_InitStructure.GPIO_Mode = RC663_SPI_MISO_GPIO_MODE;
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;  
-	GPIO_Init(RC663_SPI_MISO_GPIO, &GPIO_InitStructure);
-	/* wait Startup time */
-	if(/*pDataParams->ic == PHBAL_REG_STUBI2C_CONFIG_IC_RC663*/1)
-	{
-		volatile uint32_t delay;
-		for(delay=0;delay<10000;delay++){}
-	}
-
-	return PH_ADD_COMPCODE(PH_ERR_SUCCESS, PH_COMP_BAL);
-#endif /* SPI_USED */
+//
+//	/* wait Startup time */
+//	if(/*pDataParams->ic == PHBAL_REG_STUBI2C_CONFIG_IC_RC663*/1)
+//	{
+//		volatile uint32_t delay;
+//		for(delay=0;delay<10000;delay++){}
+//	}
+//
+//	return PH_ADD_COMPCODE(PH_ERR_SUCCESS, PH_COMP_BAL);
+//#endif /* SPI_USED */
 
 //#ifdef I2C_USED
 //	PINSEL_CFG_Type PinCfg;
@@ -187,6 +162,9 @@ phStatus_t phbalReg_Stub_OpenPort(
 //
 //	return PH_ADD_COMPCODE(PH_ERR_SUCCESS, PH_COMP_BAL);
 //#endif /* I2C_USED */
+/* TUSA */
+	SSP_Emul_GPIO_Config();
+/* TUSA */
 }
 
 phStatus_t phbalReg_Stub_ClosePort(
@@ -215,11 +193,14 @@ phStatus_t phbalReg_Stub_Exchange(
 	xferConfig.tx_data = pTxBuffer;
 
 	/* chip select reader IC */
-	LPC_GPIO0->FIOCLR = PIN_SSEL;
+//	LPC_GPIO0->FIOCLR = PIN_SSEL;
+    RC663_SPI_CS_GPIO_L();
 	/* data exchange */
-	xferLen = SSP_ReadWrite (LPC_SSPx, &xferConfig, SSP_TRANSFER_POLLING);
+//	xferLen = SSP_ReadWrite (LPC_SSPx, &xferConfig, SSP_TRANSFER_POLLING);
+    xferLen = SSP_Emul_GPIO_ReadWrite (LPC_GPIO0, &xferConfig);
 	/* chip deselect reader IC */
-	LPC_GPIO0->FIOSET = PIN_SSEL;
+//	LPC_GPIO0->FIOSET = PIN_SSEL;
+    RC663_SPI_CS_GPIO_H();
 
 	if (xferLen != wTxLength)
 	{

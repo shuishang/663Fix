@@ -430,6 +430,164 @@ void PN512_IRQHandler()
     return;
 }
 #endif /* NXPBUILD__PHHAL_HW_RC523 */
+
+/*==============================================================================================
+ * Function:	SSP_Emul_GPIO_Config
+ *
+ * @brief 		Read write data function using GPIO to emulate SSP. The function starts
+ * 					with MSB first. It also expects incoming bites with MSB first.
+ * @param[in]	GPIOx 	Pointer to GPIO peripheral, should be
+ * 							- LPC_GPIO1: SSP emulated peripheral for TUSA Board
+ * @param[in]	txByte		Input byte that has to be transmitted.
+ * @return 		a byte received from slave
+ * Note: This function can be used in both master and slave mode.
+ ***********************************************************************/
+void SSP_Emul_GPIO_Config(void)
+{
+//	LPC_IOCON->PIO0_4 &= ~0x1F;		/* RESET is a GPIO pin */
+//	/* port0, bit 2 is set to GPIO output and high */
+//	GPIOSetDir( PORT0, PIN_RESET, SET_OUT );
+//	GPIOSetValue( PORT0, PIN_RESET, SET_HIGH );
+//
+//	LPC_IOCON->EMUL_SPI_MOSI &= ~0x1F;	/*  GPIO0.7 MOSI */
+//	GPIOSetDir( EMUL_SPI_MOSI_PORT, EMUL_SPI_MOSI_PIN, SET_OUT);
+//	GPIOSetValue(EMUL_SPI_MOSI_PORT, EMUL_SPI_MOSI_PIN, SET_LOW);
+//
+//	LPC_IOCON->EMUL_SPI_MISO &= ~0x1F;	/*  GPIO0.3 MISO */
+//	GPIOSetDir( EMUL_SPI_MISO_PORT, EMUL_SPI_MISO_PIN, SET_IN );
+//
+//	LPC_IOCON->EMUL_SPI_CLK &= ~0x1F;	/*  GPIO0.9 CLK  */
+//	GPIOSetDir( EMUL_SPI_CLK_PORT, EMUL_SPI_CLK_PIN, SET_OUT );
+//	GPIOSetValue( EMUL_SPI_CLK_PORT, EMUL_SPI_CLK_PIN, SET_LOW );
+//
+//	LPC_IOCON->EMUL_SPI_SSEL &= ~0x1F;		/* GPIO0.11 SSP SSEL */
+//
+//	/* port0, bit 2 is set to GPIO output and high */
+//	GPIOSetDir( EMUL_SPI_SSEL_PORT, PIN_SSEL, SET_OUT );
+//	GPIOSetValue( EMUL_SPI_SSEL_PORT, PIN_SSEL, SSEL_DEASR );
+//
+//	GPIOSetValue( PORT0, PIN_RESET, SET_LOW );	/* RESET disactivate */
+	GPIO_InitTypeDef GPIO_InitStructure; 
+	RCC_APB2PeriphClockCmd(RC663_PDOWN_GPIO_CLK, ENABLE);
+	RCC_APB2PeriphClockCmd(RC663_SPI_CS_GPIO_CLK, ENABLE);
+    RCC_APB2PeriphClockCmd(RC663_SPI_MOSI_GPIO_CLK, ENABLE);
+	RCC_APB2PeriphClockCmd(RC663_SPI_SCLK_GPIO_CLK, ENABLE);
+	RCC_APB2PeriphClockCmd(RC663_SPI_MISO_GPIO_CLK, ENABLE);
+
+	GPIO_InitStructure.GPIO_Pin = RC663_PDOWN_GPIO_PIN;
+	GPIO_InitStructure.GPIO_Mode = RC663_PDOWN_GPIO_MODE;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;  
+	GPIO_Init(RC663_PDOWN_GPIO, &GPIO_InitStructure);
+    RC663_PDOWN_GPIO_H();
+		   	
+    GPIO_InitStructure.GPIO_Pin = RC663_SPI_MOSI_GPIO_PIN;
+	GPIO_InitStructure.GPIO_Mode = RC663_SPI_MOSI_GPIO_MODE;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;  
+	GPIO_Init(RC663_SPI_MOSI_GPIO, &GPIO_InitStructure);
+	RC663_SPI_MOSI_GPIO_L();
+
+	GPIO_InitStructure.GPIO_Pin = RC663_SPI_SCLK_GPIO_PIN;
+	GPIO_InitStructure.GPIO_Mode = RC663_SPI_SCLK_GPIO_MODE;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;  
+	GPIO_Init(RC663_SPI_SCLK_GPIO, &GPIO_InitStructure);
+	RC663_SPI_SCLK_GPIO_L();
+
+   	GPIO_InitStructure.GPIO_Pin = RC663_SPI_MISO_GPIO_PIN;
+	GPIO_InitStructure.GPIO_Mode = RC663_SPI_MISO_GPIO_MODE;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;  
+	GPIO_Init(RC663_SPI_MISO_GPIO, &GPIO_InitStructure);
+
+	GPIO_InitStructure.GPIO_Pin = RC663_SPI_CS_GPIO_PIN;
+	GPIO_InitStructure.GPIO_Mode = RC663_SPI_CS_GPIO_MODE;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;  
+	GPIO_Init(RC663_SPI_CS_GPIO, &GPIO_InitStructure);
+	RC663_SPI_CS_GPIO_H();
+	RC663_PDOWN_GPIO_L(); /* RESET disactivate */
+}
+/*==============================================================================================
+ * Function:	SSP_Emul_GPIO_SendByte
+ *
+ * @brief 		Read write data function using GPIO to emulate SSP. The function starts
+ * 					with MSB first. It also expects incoming bites with MSB first.
+ * @param[in]	GPIOx 	Pointer to GPIO peripheral, should be
+ * 							- LPC_GPIO1: SSP emulated peripheral for TUSA Board
+ * @param[in]	v		Input byte that has to be transmitted.
+ * @return 		a byte received from slave
+ * Note: This function can be used in both master and slave mode.
+ ***********************************************************************/
+uint8_t SSP_Emul_GPIO_SendByte(LPC_GPIO_Type *GPIOx, register uint8_t txByte )
+{
+	uint8_t i;
+	register uint8_t  rxByte;
+
+	rxByte &= 0x00;
+	for( i = 8; i != 0 ; )
+	{
+		i--;
+		/* Send a bit to slave */
+		if((txByte & 0x01 << i ) )
+		{
+		  RC663_SPI_MOSI_GPIO_H();
+		}
+		else
+		{
+		  RC663_SPI_MOSI_GPIO_L();
+		}
+		/* Set GPIO clock signal HIGH */
+		LPC_GPIO[EMUL_SPI_CLK_PORT]->SET = ( 0x1 << EMUL_SPI_CLK_PIN );
+		/* Read and store a bit just received from slave */
+		rxByte = ( ( GPIOx->PIN >> EMUL_SPI_MISO_PIN ) & 0x01 ) | ( rxByte << 1 );
+		/* Set GPIO clock signal LOW */
+		LPC_GPIO[EMUL_SPI_CLK_PORT]->CLR = ( 0x1 << EMUL_SPI_CLK_PIN );
+	}
+
+	return( rxByte );
+}
+/*==============================================================================================
+ * Function:	SSP_Emul_GPIO_ReadWrite
+ *
+ * @brief 		Read write data function using GPIO to emulate SSP
+ * @param[in]	SSPx 	Pointer to GPIO peripheral, should be
+ * 						- LPC_GPIO0: SSP emulated peripheral for TUSA Board
+ * 						- LPC_GPIO1:
+ * 						- LPC_GPIO2:
+ * 						- LPC_GPIO3:
+ * @param[in]	dataCfg	Pointer to a SSP_DATA_SETUP_Type structure that
+ * 						contains specified information about transmit
+ * 						data configuration.
+ * @return 		Actual Data length has been transferred in polling mode.
+ * 				Return (-1) if error.
+ * Note: This function can be used in both master and slave mode.
+ ***********************************************************************/
+int32_t SSP_Emul_GPIO_ReadWrite(LPC_GPIO_Type *GPIOx, SSP_DATA_SETUP_Type *dataCfg)
+{
+
+	    volatile uint8_t *pTxData = dataCfg->tx_data;
+	    volatile uint8_t *pRxData = dataCfg->rx_data;
+
+	    dataCfg->rx_cnt = 0;
+	    dataCfg->tx_cnt = 0;
+	    dataCfg->status = 0;
+
+	    /* data transmission and reception */
+	    while(dataCfg->tx_cnt != dataCfg->length)
+	    {
+	    	*pRxData++ = SSP_Emul_GPIO_SendByte(GPIOx, *pTxData);
+	    	pTxData++;
+	    	dataCfg->tx_cnt++;
+	    	dataCfg->rx_cnt++;
+	    }
+
+	    dataCfg->status = SSP_STAT_DONE;
+
+	    if (dataCfg->tx_data != NULL)
+	    	return dataCfg->tx_cnt;
+	    else if (dataCfg->rx_data != NULL)
+	    	return dataCfg->rx_cnt;
+	    else
+	    	return (0);
+	    return (-1);
+}
 /*----------------------------------------------------------------------------------------------
  * End of file
  ---------------------------------------------------------------------------------------------*/

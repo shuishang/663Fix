@@ -170,6 +170,9 @@ extern void LedOff(void);
 void Set_Interrupt(uint8_t bState);
 void appDataInit( void *pHal, void *pOsal, void *pData);
 #endif /* NXPBUILD__PHHAL_HW_RC523 */
+void SSP_Emul_GPIO_Config();
+uint8_t SSP_Emul_GPIO_SendByte(LPC_GPIO_Type *GPIOx, uint8_t txByte );
+int32_t SSP_Emul_GPIO_ReadWrite(LPC_GPIO_Type *GPIOx, SSP_DATA_SETUP_Type *dataCfg);
 /******************************************************************************************
  * Reader IC specific soft reset function - command
  ******************************************************************************************/
