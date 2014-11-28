@@ -28,19 +28,12 @@
 
 #include <phOsal.h>
 #include "phOsal_Stub.h"
-#include "lpc17xx_timer.h"
 #include "ph_NxpBuild.h"
-#include "lpc17xx_clkpwr.h"
+#include "stm32f10x.h"
+#include "Delay/Delay.h" 
 
-#define LPC17XX_MAX_TIMERS		 		3U		   /* number of timers on LPC1227 counting 32bit and 16 bit */
+#define LPC17XX_MAX_TIMERS		 		3U		   /* number of timers */
 #define LPC17XX_DEFAULT_TIME_INTERVAL   10000U     /**< Default timer interval that will be loaded */
-
-/* references to timers peripherals */
-#define LPC_TMR32B0                 	LPC_TIM0   /**< Timer 0 */
-#define LPC_TMR32B1                     LPC_TIM1   /**< Timer 1 */
-#define LPC_TMR32B2                     LPC_TIM2   /**< Timer 2 */
-#define LPC_TMR32B3                     LPC_TIM3   /**< Timer 3 */
-
 /**
 * \ Initializes timers to the application
 */

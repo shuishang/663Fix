@@ -31,8 +31,8 @@
 #include <phOsal.h>
 #include <phOsal_Stub.h>
 #include "phOsal_Lpc17xx_Int.h"
-#include <LPC17xx.h>
-#include <lpc17xx_timer.h>
+//#include <LPC17xx.h>
+//#include <lpc17xx_timer.h>
 
 phStatus_t phOsal_Stub_Init( phOsal_Stub_DataParams_t  *pDataParams )
 {

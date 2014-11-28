@@ -30,53 +30,72 @@
 #include <phOsal.h>
 
 static phOsal_Stub_DataParams_t* pTimerOsal;
+static u32 TIM1_counter=0;
+static u32 TIM2_counter=0;
+static u32 TIM3_counter=0;
 
 /**
 * \brief      TIMER IRQ Handlers
 */
-void TIMER0_IRQHandler(void)
+void TIM1_IRQHandler(void)
 {
-    if ( LPC_TMR32B0->IR & (0x01) )
+    if(TIM_GetITStatus(TIM1, TIM_IT_Update) != RESET ) /*检查TIM1更新中断发生与否*/
     {
-        LPC_TMR32B0->IR = 0x1;         /* clear interrupt flag */
-    }
-    /* This is the only timer we are going to use for call backs  */
-    phOsal_Timer_ExecCallback(pTimerOsal, 0);
-
-    return;
+	   TIM_ClearITPendingBit(TIM1,TIM_IT_Update);/* clear interrupt flag */
+	   if(TIM1_counter>0)
+	   {
+	      TIM1_counter--;
+	   }
+	   if(TIM1_counter==0)
+	   {
+	      phOsal_Timer_ExecCallback(pTimerOsal, 1);	      
+		  TIM1_counter=0;
+	   }
+	}
 }
 
-void TIMER1_IRQHandler(void)
+void TIM2_IRQHandler(void)
 {
-    if ( LPC_TMR32B1->IR & (0x01) )
+    if(TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET ) /*检查TIM2更新中断发生与否*/
     {
-        LPC_TMR32B1->IR = 0x1;         /* clear interrupt flag */
-    }
-    phOsal_Timer_ExecCallback(pTimerOsal, 1);
-
-    return;
+	   TIM_ClearITPendingBit(TIM2,TIM_IT_Update);/* clear interrupt flag */
+	   if(TIM2_counter>0)
+	   {
+	      TIM2_counter--;
+	   }
+	   if(TIM2_counter==0)
+	   {
+	      phOsal_Timer_ExecCallback(pTimerOsal, 2);	      
+		  TIM2_counter=0;
+	   }	
+	}
 }
 
-void TIMER2_IRQHandler(void)
+void TIM3_IRQHandler(void)
 {
-    if ( LPC_TMR32B2->IR & (0x01) )
+    if(TIM_GetITStatus(TIM3, TIM_IT_Update) != RESET ) /*检查TIM3更新中断发生与否*/
     {
-        LPC_TMR32B2->IR = 0x1;         /* clear interrupt flag */
-    }
-    phOsal_Timer_ExecCallback(pTimerOsal, 2);
-
-    return;
+	   TIM_ClearITPendingBit(TIM3,TIM_IT_Update);/* clear interrupt flag */
+	   if(TIM3_counter>0)
+	   {
+	      TIM3_counter--;
+	   }
+	   if(TIM3_counter==0)
+	   {
+	      phOsal_Timer_ExecCallback(pTimerOsal, 3);	      
+		  TIM3_counter=0;
+	   }
+	}
 }
-
 
 /*
  * Timers handling functions */
 void phOsal_Lpc17xx_Int_Timer_Init(phOsal_Stub_DataParams_t *pDataParams)
 {
-    uint8_t count = 0;
+    uint8_t count = 1;
 
     /* Initialize the timer structure */
-    for (count = 0; count < LPC17XX_MAX_TIMERS; count++)
+    for (count = 1; count < LPC17XX_MAX_TIMERS; count++)
     {
         pDataParams->gTimers[count].dwTimerId   = count;
         pDataParams->gTimers[count].bTimerFree = TIMER_FREE;
@@ -84,7 +103,6 @@ void phOsal_Lpc17xx_Int_Timer_Init(phOsal_Stub_DataParams_t *pDataParams)
 
     /* Also keep the timers ready with all the default settings.
       This also does the job of registering the IRQ with NVIC */
-    phOsal_Lpc17xx_Int_Init_Timer32(0, LPC17XX_DEFAULT_TIME_INTERVAL);
     phOsal_Lpc17xx_Int_Init_Timer32(1, LPC17XX_DEFAULT_TIME_INTERVAL);
     phOsal_Lpc17xx_Int_Init_Timer32(2, LPC17XX_DEFAULT_TIME_INTERVAL);
     phOsal_Lpc17xx_Int_Init_Timer32(3, LPC17XX_DEFAULT_TIME_INTERVAL);
@@ -95,11 +113,11 @@ void phOsal_Lpc17xx_Int_Timer_Init(phOsal_Stub_DataParams_t *pDataParams)
 void phOsal_Lpc17xx_Int_Timer_Create(phOsal_Stub_DataParams_t *pDataParams,
         uint32_t *pTimerId)
 {
-    uint8_t count = 0;
+    uint8_t count = 1;
 
     *pTimerId = -1;
     /* Look for a free timer that is available for use */
-    for (count = 0; count < LPC17XX_MAX_TIMERS; count++)
+    for (count = 1; count < LPC17XX_MAX_TIMERS; count++)
     {
         if (pDataParams->gTimers[count].bTimerFree == TIMER_FREE)
         {
@@ -185,137 +203,36 @@ phStatus_t phOsal_Lpc17xx_Int_Timer_Delete(phOsal_Stub_DataParams_t *pDataParams
 
 void phOsal_Lpc17xx_Int_Delay32Ms(uint32_t dwTimerId, uint32_t delayInMs)
 {
-    if (dwTimerId == 0)
-    {
-        /* setup timer #0 for delay */
-        LPC_TMR32B0->TCR = 0x02;        /* reset timer */
-        LPC_TMR32B0->PR  = 0x00;        /* set prescaler to zero */
-        LPC_TMR32B0->MR0 = delayInMs * ((SystemCoreClock) / 1000);
-        LPC_TMR32B0->IR  = 0xff;        /* reset all interrrupts */
-        LPC_TMR32B0->MCR = 0x04;        /* stop timer on match */
-        LPC_TMR32B0->TCR = 0x01;        /* start timer */
-
-        /* wait until delay time has elapsed */
-        while (LPC_TMR32B0->TCR & 0x01);
+    if ((dwTimerId == 1)|(dwTimerId == 2)|(dwTimerId == 3))
+    {		   
+	   delay_ms(delayInMs);
     }
-    else if (dwTimerId == 1)
-    {
-        /* setup timer #1 for delay */
-        LPC_TMR32B1->TCR = 0x02;        /* reset timer */
-        LPC_TMR32B1->PR  = 0x00;        /* set prescaler to zero */
-        LPC_TMR32B1->MR0 = delayInMs * ((SystemCoreClock) / 1000);
-        LPC_TMR32B1->IR  = 0xff;        /* reset all interrrupts */
-        LPC_TMR32B1->MCR = 0x04;        /* stop timer on match */
-        LPC_TMR32B1->TCR = 0x01;        /* start timer */
-
-        /* wait until delay time has elapsed */
-        while (LPC_TMR32B1->TCR & 0x01);
-    }
-    else if (dwTimerId == 2)
-    {
-        /* setup timer #1 for delay */
-        LPC_TMR32B2->TCR = 0x02;        /* reset timer */
-        LPC_TMR32B2->PR  = 0x00;        /* set prescaler to zero */
-        LPC_TMR32B2->MR0 = delayInMs * ((SystemCoreClock) / 1000);
-        LPC_TMR32B2->IR  = 0xff;        /* reset all interrrupts */
-        LPC_TMR32B2->MCR = 0x04;        /* stop timer on match */
-        LPC_TMR32B2->TCR = 0x01;        /* start timer */
-
-        /* wait until delay time has elapsed */
-        while (LPC_TMR32B2->TCR & 0x01);
-    }
-    else if (dwTimerId == 3)
-    {
-        /* setup timer #1 for delay */
-        LPC_TMR32B3->TCR = 0x02;        /* reset timer */
-        LPC_TMR32B3->PR  = 0x00;        /* set prescaler to zero */
-        LPC_TMR32B3->MR0 = delayInMs * ((SystemCoreClock) / 1000);
-        LPC_TMR32B3->IR  = 0xff;        /* reset all interrrupts */
-        LPC_TMR32B3->MCR = 0x04;        /* stop timer on match */
-        LPC_TMR32B3->TCR = 0x01;        /* start timer */
-
-        /* wait until delay time has elapsed */
-        while (LPC_TMR32B3->TCR & 0x01);
-    }
-
     return;
 }
 
 void phOsal_Lpc17xx_Int_Delay32Us(uint32_t dwTimerId, uint32_t delayInUs)
 {
-    if (dwTimerId == 0)
-    {
-        /* setup timer #0 for delay */
-        LPC_TMR32B0->TCR = 0x02;        /* reset timer */
-        LPC_TMR32B0->PR  = 0x00;        /* set prescaler to zero */
-        LPC_TMR32B0->MR0 = delayInUs * ((SystemCoreClock)/1000000);
-        LPC_TMR32B0->IR  = 0xff;        /* reset all interrrupts */
-        LPC_TMR32B0->MCR = 0x04;        /* stop timer on match */
-        LPC_TMR32B0->TCR = 0x01;        /* start timer */
-
-        /* wait until delay time has elapsed */
-        while (LPC_TMR32B0->TCR & 0x01);
+	if ((dwTimerId == 1)|(dwTimerId == 2)|(dwTimerId == 3))
+    {		   
+	   delay_us(delayInUs);
     }
-    else if (dwTimerId == 1)
-    {
-        /* setup timer #1 for delay */
-        LPC_TMR32B1->TCR = 0x02;        /* reset timer */
-        LPC_TMR32B1->PR  = 0x00;        /* set prescaler to zero */
-        LPC_TMR32B1->MR0 = delayInUs * ((SystemCoreClock)/1000000);
-        LPC_TMR32B1->IR  = 0xff;        /* reset all interrrupts */
-        LPC_TMR32B1->MCR = 0x04;        /* stop timer on match */
-        LPC_TMR32B1->TCR = 0x01;        /* start timer */
-
-        /* wait until delay time has elapsed */    
-        while (LPC_TMR32B1->TCR & 0x01);
-    }
-    else if (dwTimerId == 2)
-    {
-        /* setup timer #1 for delay */
-        LPC_TMR32B2->TCR = 0x02;        /* reset timer */
-        LPC_TMR32B2->PR  = 0x00;        /* set prescaler to zero */
-        LPC_TMR32B2->MR0 = delayInUs * ((SystemCoreClock)/1000000);
-        LPC_TMR32B2->IR  = 0xff;        /* reset all interrrupts */
-        LPC_TMR32B2->MCR = 0x04;        /* stop timer on match */
-        LPC_TMR32B2->TCR = 0x01;        /* start timer */
-
-        /* wait until delay time has elapsed */
-        while (LPC_TMR32B2->TCR & 0x01);
-    }
-    else if (dwTimerId == 3)
-    {
-        /* setup timer #1 for delay */
-        LPC_TMR32B3->TCR = 0x02;        /* reset timer */
-        LPC_TMR32B3->PR  = 0x00;        /* set prescaler to zero */
-        LPC_TMR32B3->MR0 = delayInUs * ((SystemCoreClock)/1000000);
-        LPC_TMR32B3->IR  = 0xff;        /* reset all interrrupts */
-        LPC_TMR32B3->MCR = 0x04;        /* stop timer on match */
-        LPC_TMR32B3->TCR = 0x01;        /* start timer */
-
-        /* wait until delay time has elapsed */
-        while (LPC_TMR32B3->TCR & 0x01);
-    }
-
     return;
 }
 
 void phOsal_Lpc17xx_Int_Enable_Timer32(uint32_t dwTimerId)
 {
-    if ( dwTimerId == 0 )
+
+    if ( dwTimerId == 1 )
     {
-        LPC_TMR32B0->TCR = 1;
-    }
-    else if ( dwTimerId == 1 )
-    {
-        LPC_TMR32B1->TCR = 1;
+	    TIM_Cmd(TIM1,ENABLE);
     }
     else if  ( dwTimerId == 2 )
     {
-        LPC_TMR32B2->TCR = 1;
+	    TIM_Cmd(TIM2,ENABLE);
     }
     else
     {
-        LPC_TMR32B3->TCR = 1;
+	    TIM_Cmd(TIM3,ENABLE);
     }
 
     return;
@@ -323,21 +240,17 @@ void phOsal_Lpc17xx_Int_Enable_Timer32(uint32_t dwTimerId)
 
 void phOsal_Lpc17xx_Int_Disable_Timer32(uint32_t dwTimerId)
 {
-    if ( dwTimerId == 0 )
+    if  ( dwTimerId == 1 )
     {
-        LPC_TMR32B0->TCR = 0;
-    }
-    else if  ( dwTimerId == 1 )
-    {
-        LPC_TMR32B1->TCR = 0;
+	    TIM_Cmd(TIM1,DISABLE);
     }
     else if  ( dwTimerId == 2 )
     {
-        LPC_TMR32B2->TCR = 0;
+	    TIM_Cmd(TIM2,DISABLE);
     }
     else
     {
-        LPC_TMR32B3->TCR = 0;
+	    TIM_Cmd(TIM3,DISABLE);
     }
 
     return;
@@ -345,31 +258,17 @@ void phOsal_Lpc17xx_Int_Disable_Timer32(uint32_t dwTimerId)
 
 void phOsal_Lpc17xx_Int_Reset_Timer32(uint32_t dwTimerId)
 {
-    uint32_t regVal;
-
-    if ( dwTimerId == 0 )
+    if (dwTimerId == 1)
     {
-        regVal = LPC_TMR32B0->TCR;
-        regVal |= 0x02;
-        LPC_TMR32B0->TCR = regVal;
-    }
-    else if (dwTimerId == 1)
-    {
-        regVal = LPC_TMR32B1->TCR;
-        regVal |= 0x02;
-        LPC_TMR32B1->TCR = regVal;
+        TIM_DeInit(TIM1);
     }
     else if (dwTimerId == 2)
     {
-        regVal = LPC_TMR32B2->TCR;
-        regVal |= 0x02;
-        LPC_TMR32B2->TCR = regVal;
+        TIM_DeInit(TIM2);
     }
     else if (dwTimerId == 3)
     {
-        regVal = LPC_TMR32B3->TCR;
-        regVal |= 0x02;
-        LPC_TMR32B3->TCR = regVal;
+        TIM_DeInit(TIM3);
     }
 
     return;
@@ -377,52 +276,67 @@ void phOsal_Lpc17xx_Int_Reset_Timer32(uint32_t dwTimerId)
 
 void phOsal_Lpc17xx_Int_Init_Timer32(uint32_t dwTimerId, uint32_t TimerInterval)
 {
-
-    if ( dwTimerId == 0 )
+	NVIC_InitTypeDef NVIC_InitStructure;
+	TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
+    if ( dwTimerId == 1 )
     {
-        LPC_TMR32B0->MR0 = TimerInterval;
-        /* Interrupt and Reset on MR0 */
-        LPC_TMR32B0->MCR = (0x5);
-
-        /* Enable the TIMER0 Interrupt */
-        NVIC_EnableIRQ(TIMER0_IRQn);
-    }
-    else if ( dwTimerId == 1 )
-    {
-        LPC_TMR32B1->MR0 = TimerInterval;
-        /* Interrupt and Reset on MR0 */
-        LPC_TMR32B1->MCR = (0x5);
-
-        /* Enable the TIMER1 Interrupt */
-        NVIC_EnableIRQ(TIMER1_IRQn);
+		RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2,ENABLE);		
+		/* Enable the TIMx global Interrupt */
+		NVIC_InitStructure.NVIC_IRQChannel = TIM1_UP_IRQn;
+		NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;	//优先级别最高
+		NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
+		NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+		NVIC_Init(&NVIC_InitStructure);
+		 
+		TIM_TimeBaseStructure.TIM_Period = 12-1;//1us---12001更稳定准确
+	    TIM_TimeBaseStructure.TIM_Prescaler = (6-1);	 
+	    TIM_TimeBaseStructure.TIM_ClockDivision = 0;
+	    TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
+	   	
+		TIM_TimeBaseInit(TIM1, &TIM_TimeBaseStructure);
+		TIM_ClearITPendingBit(TIM1,TIM_IT_Update);
+		TIM_ITConfig(TIM1, TIM_IT_Update, ENABLE);
+		//1mS中断一次---.TIM_Period =12000
     }
     else if ( dwTimerId == 2 )
     {
-        /*On reset, Timer0/1 are enabled (PCTIM0/1 = 1), and Timer2/3 are disabled (PCTIM2/3 = 0)*/
-        CLKPWR_ConfigPPWR (CLKPWR_PCONP_PCTIM2, ENABLE);
-
-        LPC_TMR32B2->MR0 = TimerInterval;
-
-        /* Interrupt and Reset on MR0 */
-
-        LPC_TMR32B2->MCR = (0x5);
-
-        /* Enable the TIMER1 Interrupt */
-        NVIC_EnableIRQ(TIMER2_IRQn);
-
+		RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2,ENABLE);		
+		/* Enable the TIMx global Interrupt */
+		NVIC_InitStructure.NVIC_IRQChannel = TIM2_IRQn;
+		NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;	//优先级别最高
+		NVIC_InitStructure.NVIC_IRQChannelSubPriority = 2;
+		NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;		
+		NVIC_Init(&NVIC_InitStructure);
+	 
+		TIM_TimeBaseStructure.TIM_Period = 12-1;//1us---12001更稳定准确
+	    TIM_TimeBaseStructure.TIM_Prescaler = (6-1);	 
+	    TIM_TimeBaseStructure.TIM_ClockDivision = 0;
+	    TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
+	   	
+		TIM_TimeBaseInit(TIM2, &TIM_TimeBaseStructure);
+		TIM_ClearITPendingBit(TIM2,TIM_IT_Update);
+		TIM_ITConfig(TIM2, TIM_IT_Update, ENABLE);
+		//1mS中断一次---.TIM_Period =12000
     }
     else if ( dwTimerId == 3 )
     {
-        /*On reset, Timer0/1 are enabled (PCTIM0/1 = 1), and Timer2/3 are disabled (PCTIM2/3 = 0)*/
-        CLKPWR_ConfigPPWR (CLKPWR_PCONP_PCTIM3, ENABLE);
-
-        LPC_TMR32B3->MR0 = TimerInterval;
- 
-        /* Interrupt and Reset on MR0 */
-        LPC_TMR32B3->MCR = (0x5);
-
-        /* Enable the TIMER1 Interrupt */
-        NVIC_EnableIRQ(TIMER3_IRQn);
+		RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3,ENABLE);		
+		/* Enable the TIMx global Interrupt */
+		NVIC_InitStructure.NVIC_IRQChannel = TIM3_IRQn;
+		NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;	//优先级别最高
+		NVIC_InitStructure.NVIC_IRQChannelSubPriority = 3;
+		NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;	
+		NVIC_Init(&NVIC_InitStructure);
+	
+		TIM_TimeBaseStructure.TIM_Period = 12-1;//1us---12001更稳定准确
+	    TIM_TimeBaseStructure.TIM_Prescaler = (6-1);	 
+	    TIM_TimeBaseStructure.TIM_ClockDivision = 0;
+	    TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
+	   	
+		TIM_TimeBaseInit(TIM3, &TIM_TimeBaseStructure);
+		TIM_ClearITPendingBit(TIM3,TIM_IT_Update);
+		TIM_ITConfig(TIM3, TIM_IT_Update, ENABLE);
+		//1mS中断一次---.TIM_Period =12000
     }
 
     return;
@@ -431,21 +345,17 @@ void phOsal_Lpc17xx_Int_Init_Timer32(uint32_t dwTimerId, uint32_t TimerInterval)
 void phOsal_Lpc17xx_Int_Load_TimerMs(uint32_t dwTimerId, uint32_t dwTimerInterval)
 {
     /* Load the given timer interval onto match register 0 */
-    if (dwTimerId == 0)
+    if (dwTimerId == 1)
     {
-        LPC_TMR32B0->MR0 = dwTimerInterval* ((SystemCoreClock) / 1000);
-    }
-    else if (dwTimerId == 1)
-    {
-        LPC_TMR32B1->MR0 = dwTimerInterval* ((SystemCoreClock) / 1000);
+        TIM1_counter= dwTimerInterval*1000;
     }
     else if (dwTimerId == 2)
     {
-        LPC_TMR32B2->MR0 = dwTimerInterval* ((SystemCoreClock) / 1000);
+        TIM2_counter= dwTimerInterval*1000;
     }
     else if (dwTimerId == 3)
     {
-        LPC_TMR32B3->MR0 = dwTimerInterval* ((SystemCoreClock) / 1000);
+        TIM3_counter= dwTimerInterval*1000;
     }
 
     return;
@@ -454,21 +364,17 @@ void phOsal_Lpc17xx_Int_Load_TimerMs(uint32_t dwTimerId, uint32_t dwTimerInterva
 void phOsal_Lpc17xx_Int_Load_TimerUs(uint32_t dwTimerId, uint32_t dwTimerInterval)
 {
     /* Load the given timer interval onto match register 0 */
-    if (dwTimerId == 0)
+    if (dwTimerId == 1)
     {
-        LPC_TMR32B0->MR0 = dwTimerInterval* ((SystemCoreClock) / 1000000);
-    }
-    else if (dwTimerId == 1)
-    {
-        LPC_TMR32B1->MR0 = dwTimerInterval* ((SystemCoreClock) / 1000000);
+        TIM1_counter= dwTimerInterval;
     }
     else if (dwTimerId == 2)
     {
-        LPC_TMR32B2->MR0 = dwTimerInterval* ((SystemCoreClock) / 1000000);
+        TIM2_counter= dwTimerInterval;
     }
     else if (dwTimerId == 3)
     {
-        LPC_TMR32B3->MR0 = dwTimerInterval* ((SystemCoreClock) / 1000000);
+        TIM3_counter= dwTimerInterval;
     }
 
     return;
