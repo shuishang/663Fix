@@ -165,6 +165,7 @@ phStatus_t phbalReg_Stub_OpenPort(
 /* TUSA */
 	SSP_Emul_GPIO_Config();
 /* TUSA */
+    return PH_ADD_COMPCODE(PH_ERR_SUCCESS, PH_COMP_BAL);
 }
 
 phStatus_t phbalReg_Stub_ClosePort(
@@ -197,7 +198,7 @@ phStatus_t phbalReg_Stub_Exchange(
     RC663_SPI_CS_GPIO_L();
 	/* data exchange */
 //	xferLen = SSP_ReadWrite (LPC_SSPx, &xferConfig, SSP_TRANSFER_POLLING);
-    xferLen = SSP_Emul_GPIO_ReadWrite (LPC_GPIO0, &xferConfig);
+    xferLen = SSP_Emul_GPIO_ReadWrite (&xferConfig);
 	/* chip deselect reader IC */
 //	LPC_GPIO0->FIOSET = PIN_SSEL;
     RC663_SPI_CS_GPIO_H();

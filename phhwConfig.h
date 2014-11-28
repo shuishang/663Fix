@@ -96,6 +96,7 @@
 #define RC663_SPI_MISO_GPIO_CLK		RCC_APB2Periph_GPIOA
 #define RC663_SPI_MISO_GPIO_PIN		GPIO_Pin_6
 #define RC663_SPI_MISO_GPIO_MODE  	GPIO_Mode_IPU	 
+#define Read_MISO()  	            GPIO_ReadInputDataBit(RC663_SPI_MISO_GPIO,RC663_SPI_MISO_GPIO_PIN);		//∂¡MISOµÁ∆Ω
 
 #define RC663_PDOWN_GPIO		    	GPIOB
 #define RC663_PDOWN_GPIO_CLK	    	RCC_APB2Periph_GPIOB
@@ -152,11 +153,23 @@
 #define SSP_CLK            1 << 7
 #define SSP_MISO           1 << 8
 #define SSP_MOSI           1 << 9
-
+/* SSP Status Implementation definitions */
+#define SSP_STAT_DONE		(1UL<<8)		/**< Done */
+#define SSP_STAT_ERROR		(1UL<<9)		/**< Error */
 /***********************************************************************************************
  **	Global variables
  ***********************************************************************************************/
-
+/**
+ * @brief SPI Data configuration structure definitions
+ */
+typedef struct {
+	void *tx_data;				/**< Pointer to transmit data */
+	uint32_t tx_cnt;			/**< Transmit counter */
+	void *rx_data;				/**< Pointer to transmit data */
+	uint32_t rx_cnt;			/**< Receive counter */
+	uint32_t length;			/**< Length of transfer data */
+	uint32_t status;			/**< Current status of SSP activity */
+} SSP_DATA_SETUP_Type;
 /***********************************************************************************************
  **	Global function prototypes
  ***********************************************************************************************/
@@ -170,9 +183,9 @@ extern void LedOff(void);
 void Set_Interrupt(uint8_t bState);
 void appDataInit( void *pHal, void *pOsal, void *pData);
 #endif /* NXPBUILD__PHHAL_HW_RC523 */
-void SSP_Emul_GPIO_Config();
-uint8_t SSP_Emul_GPIO_SendByte(LPC_GPIO_Type *GPIOx, uint8_t txByte );
-int32_t SSP_Emul_GPIO_ReadWrite(LPC_GPIO_Type *GPIOx, SSP_DATA_SETUP_Type *dataCfg);
+void SSP_Emul_GPIO_Config(void);
+uint8_t SSP_Emul_GPIO_SendByte(uint8_t txByte );
+int32_t SSP_Emul_GPIO_ReadWrite(SSP_DATA_SETUP_Type *dataCfg);
 /******************************************************************************************
  * Reader IC specific soft reset function - command
  ******************************************************************************************/

@@ -515,9 +515,9 @@ void SSP_Emul_GPIO_Config(void)
  * @return 		a byte received from slave
  * Note: This function can be used in both master and slave mode.
  ***********************************************************************/
-uint8_t SSP_Emul_GPIO_SendByte(LPC_GPIO_Type *GPIOx, register uint8_t txByte )
+uint8_t SSP_Emul_GPIO_SendByte(register uint8_t txByte )
 {
-	uint8_t i;
+	uint8_t i,MISO_Val;
 	register uint8_t  rxByte;
 
 	rxByte &= 0x00;
@@ -534,11 +534,12 @@ uint8_t SSP_Emul_GPIO_SendByte(LPC_GPIO_Type *GPIOx, register uint8_t txByte )
 		  RC663_SPI_MOSI_GPIO_L();
 		}
 		/* Set GPIO clock signal HIGH */
-		LPC_GPIO[EMUL_SPI_CLK_PORT]->SET = ( 0x1 << EMUL_SPI_CLK_PIN );
+		RC663_SPI_SCLK_GPIO_H();
 		/* Read and store a bit just received from slave */
-		rxByte = ( ( GPIOx->PIN >> EMUL_SPI_MISO_PIN ) & 0x01 ) | ( rxByte << 1 );
+		MISO_Val=Read_MISO();
+		rxByte = ( (MISO_Val) & 0x01 ) | ( rxByte << 1 );
 		/* Set GPIO clock signal LOW */
-		LPC_GPIO[EMUL_SPI_CLK_PORT]->CLR = ( 0x1 << EMUL_SPI_CLK_PIN );
+		RC663_SPI_SCLK_GPIO_L();
 	}
 
 	return( rxByte );
@@ -559,7 +560,7 @@ uint8_t SSP_Emul_GPIO_SendByte(LPC_GPIO_Type *GPIOx, register uint8_t txByte )
  * 				Return (-1) if error.
  * Note: This function can be used in both master and slave mode.
  ***********************************************************************/
-int32_t SSP_Emul_GPIO_ReadWrite(LPC_GPIO_Type *GPIOx, SSP_DATA_SETUP_Type *dataCfg)
+int32_t SSP_Emul_GPIO_ReadWrite(SSP_DATA_SETUP_Type *dataCfg)
 {
 
 	    volatile uint8_t *pTxData = dataCfg->tx_data;
@@ -572,7 +573,7 @@ int32_t SSP_Emul_GPIO_ReadWrite(LPC_GPIO_Type *GPIOx, SSP_DATA_SETUP_Type *dataC
 	    /* data transmission and reception */
 	    while(dataCfg->tx_cnt != dataCfg->length)
 	    {
-	    	*pRxData++ = SSP_Emul_GPIO_SendByte(GPIOx, *pTxData);
+	    	*pRxData++ = SSP_Emul_GPIO_SendByte(*pTxData);
 	    	pTxData++;
 	    	dataCfg->tx_cnt++;
 	    	dataCfg->rx_cnt++;
